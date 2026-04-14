@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buyurtma berish — PhoneShop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/style.css">
+  <style>
+    .checkout-layout { display: grid; grid-template-columns: 1fr 360px; gap: 28px; align-items: start; }
+    .order-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+    }
+    .order-item:last-child { border-bottom: none; }
+    .order-item-icon {
+      width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .success-screen {
+      text-align: center; padding: 60px 24px;
+    }
+    .success-icon { font-size: 72px; margin-bottom: 20px; animation: pop .4s cubic-bezier(.17,.67,.35,1.3); }
+    @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+    .success-title { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+    .success-sub { font-size: 16px; color: var(--text-muted); margin-bottom: 8px; }
+    .order-num {
+      display: inline-block; background: var(--accent-light); border: 1px solid var(--accent);
+      color: var(--accent2); padding: 8px 20px; border-radius: 100px;
+      font-size: 15px; font-weight: 700; margin: 16px 0 28px;
+    }
+    @media (max-width: 768px) { .checkout-layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <a class="logo" href="/phone-store/index.html">Phone<span>Shop</span></a>
+    <nav class="nav">
+      <a href="/phone-store/index.html">Bosh sahifa</a>
+      <a href="./phones.html">Telefonlar</a>
+      <a href="./cart.html">Savat</a>
+    </nav>
+    <div class="header-right">
+      <a class="cart-btn" href="./cart.html">🛒 Savat <span class="cart-count" id="cart-count">0</span></a>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <div class="breadcrumb">
+    <a href="/phone-store/index.html">Bosh sahifa</a><span>›</span>
+    <a href="/phone-store/public/cart.html">Savat</a><span>›</span>
+    <span>Buyurtma berish</span>
+  </div>
+
+  <div id="main-content"></div>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-bottom">© 2026 PhoneShop. Barcha huquqlar himoyalangan.</div>
+  </div>
+</footer>
+
+<div id="toast-wrap"></div>
+
+<script type="module">
+import { getCart, clearCart, cartTotal, formatPrice, brandIcon, updateCartCount } from '../js/cart.js';
+
+const API = '/api';
+
+function init() {
+  const cart = getCart();
+  updateCartCount();
+
+  if (!cart.length) {
+    document.getElementById('main-content').innerHTML = `
+      <div class="empty" style="padding:80px 0">
+        <div class="empty-icon">🛒</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px">Savat bo'sh</div>
+        <a class="btn btn-primary" href="phones.html">Telefon tanlash</a>
+      </div>`;
+    return;
+  }
+
+  const total = cartTotal();
+  const delivery = 30000;
+
+  document.getElementById('main-content').innerHTML = `
+    <h1 class="section-title" style="margin-bottom:24px">Buyurtma berish</h1>
+    <div class="checkout-layout">
+      <form id="order-form">
+        <div class="card" style="margin-bottom:20px">
+          <div style="font-size:15px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px">
+            <span style="background:var(--accent);color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800">1</span>
+            Shaxsiy ma'lumotlar
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label">Ism *</label>
+              <input type="text" id="firstName" placeholder="Alisher" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Familiya *</label>
+              <input type="text" id="lastName" placeholder="Karimov" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Telefon raqam *</label>
+            <input type="tel" id="phone" placeholder="+998 90 123 45 67" required>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div style="font-size:15px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px">
+            <span style="background:var(--accent);color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800">2</span>
+            Yetkazib berish manzili
+          </div>
+          <div class="form-group">
+            <label class="form-label">Shahar *</label>
+            <select id="city" required>
+              <option value="">Shaharni tanlang</option>
+              <option value="Toshkent">Toshkent</option>
+              <option value="Samarqand">Samarqand</option>
+              <option value="Buxoro">Buxoro</option>
+              <option value="Namangan">Namangan</option>
+              <option value="Andijon">Andijon</option>
+              <option value="Farg'ona">Farg'ona</option>
+              <option value="Qo'qon">Qo'qon</option>
+              <option value="Nukus">Nukus</option>
+              <option value="Qarshi">Qarshi</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">To'liq manzil *</label>
+            <textarea id="address" placeholder="Ko'cha, uy, xonadon..." rows="3" required></textarea>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div style="font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+            <span style="background:var(--accent);color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800">3</span>
+            To'lov usuli
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:12px;border:1px solid var(--border);border-radius:10px;transition:border .15s" id="pay-cash-label">
+              <input type="radio" name="payment" value="cash" checked style="accent-color:var(--accent)">
+              <span>💵</span>
+              <div><div style="font-weight:600;font-size:14px">Naqd pul</div><div style="font-size:12px;color:var(--text-muted)">Olganingizda to'lang</div></div>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:12px;border:1px solid var(--border);border-radius:10px;transition:border .15s" id="pay-card-label">
+              <input type="radio" name="payment" value="card" style="accent-color:var(--accent)">
+              <span>💳</span>
+              <div><div style="font-weight:600;font-size:14px">Plastik karta</div><div style="font-size:12px;color:var(--text-muted)">Payme / Click</div></div>
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="submit-btn">
+          Buyurtmani tasdiqlash →
+        </button>
+      </form>
+
+      <div>
+        <div class="card" style="position:sticky;top:80px">
+          <div style="font-size:15px;font-weight:700;margin-bottom:16px">Buyurtma tarkibi</div>
+          <div id="order-items">
+            ${cart.map(item => `
+              <div class="order-item">
+                <div class="order-item-icon" style="background:linear-gradient(145deg,${item.color},${item.color}88)">${brandIcon(item.name.split(' ')[0])}</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600">${item.name}</div>
+                  <div style="font-size:12px;color:var(--text-muted)">${item.quantity} dona × ${formatPrice(item.price)}</div>
+                </div>
+                <div style="font-size:14px;font-weight:700;color:var(--accent2)">${formatPrice(item.price * item.quantity)}</div>
+              </div>`).join('')}
+          </div>
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-muted);margin-bottom:8px">
+              <span>Telefonlar</span><span>${formatPrice(total)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-muted);margin-bottom:14px">
+              <span>Yetkazib berish</span><span>${formatPrice(delivery)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:800">
+              <span>Jami</span><span style="color:var(--accent2)">${formatPrice(total + delivery)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('order-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true; btn.textContent = 'Jo\'natilmoqda...';
+
+    const data = {
+      firstName: document.getElementById('firstName').value.trim(),
+      lastName: document.getElementById('lastName').value.trim(),
+      phone: document.getElementById('phone').value.trim(),
+      address: document.getElementById('address').value.trim(),
+      city: document.getElementById('city').value,
+      items: getCart().map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
+      total: cartTotal() + delivery,
+    };
+
+    try {
+      const res = await fetch(`${API}/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error();
+      const order = await res.json();
+      clearCart();
+      showSuccess(order.id, data.firstName);
+    } catch {
+      btn.disabled = false; btn.textContent = 'Buyurtmani tasdiqlash →';
+      document.getElementById('toast-wrap') && (document.getElementById('toast-wrap').innerHTML = '');
+      const wrap = document.getElementById('toast-wrap') || document.body;
+      const t = document.createElement('div');
+      t.className = 'toast toast-error';
+      t.innerHTML = '<span style="color:var(--red);font-weight:700">✕</span> Xatolik yuz berdi. Qayta urinib ko\'ring.';
+      document.getElementById('toast-wrap').appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+  });
+}
+
+function showSuccess(orderId, name) {
+  document.getElementById('main-content').innerHTML = `
+    <div class="success-screen">
+      <div class="success-icon">🎉</div>
+      <div class="success-title">Buyurtma qabul qilindi!</div>
+      <div class="success-sub">Rahmat, ${name}! Siz bilan tez orada bog'lanamiz.</div>
+      <div class="success-sub">Buyurtma raqamingiz:</div>
+      <div class="order-num">#${String(orderId).padStart(5,'0')}</div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <a class="btn btn-primary btn-lg" href="/store/">Bosh sahifaga qaytish</a>
+        <a class="btn btn-secondary btn-lg" href="phones.html">Yana xarid qilish</a>
+      </div>
+      <div style="margin-top:32px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);max-width:400px;margin-inline:auto;text-align:left">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text-muted)">Keyingi qadamlar</div>
+        <div style="font-size:14px;display:flex;flex-direction:column;gap:8px">
+          <span>📞 Operator 30 daqiqa ichida qo'ng'iroq qiladi</span>
+          <span>📦 Yetkazib berish 1-3 ish kuni ichida</span>
+          <span>✅ Olganingizda tekshirish imkoni</span>
+        </div>
+      </div>
+    </div>`;
+  updateCartCount();
+}
+
+const delivery = 30000;
+init();
+</script>
+</body>
+</html>

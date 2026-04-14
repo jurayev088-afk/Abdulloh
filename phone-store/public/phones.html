@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barcha telefonlar — PhoneShop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <a class="logo" href="/store/">Phone<span>Shop</span></a>
+    <nav class="nav">
+      <a href="/phone-store/index.html">Bosh sahifa</a>
+      <a href="./phones.html" class="active">Telefonlar</a>
+      <a href="./cart.html">Savat</a>
+    </nav>
+    <div class="header-right">
+      <a class="cart-btn" href="./cart.html">🛒 Savat <span class="cart-count" id="cart-count">0</span></a>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <div class="breadcrumb">
+    <a href="/phone-store/index.html">Bosh sahifa</a>
+    <span>›</span>
+    <span>Telefonlar</span>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+    <div>
+      <h1 class="section-title">Barcha telefonlar</h1>
+      <p id="result-count" style="color:var(--text-muted);font-size:14px"></p>
+    </div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <div class="search-wrap" style="flex:1;min-width:200px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" class="search-input" id="search" placeholder="Telefon nomini qidiring...">
+    </div>
+    <select id="brand-filter" style="width:160px">
+      <option value="">Barcha brendlar</option>
+    </select>
+    <select id="sort-filter" style="width:180px">
+      <option value="default">Standart tartib</option>
+      <option value="price-asc">Narx: arzondan qimmatga</option>
+      <option value="price-desc">Narx: qimmatdan arzona</option>
+    </select>
+    <button class="btn btn-outline btn-sm" id="reset-btn">Tozalash</button>
+  </div>
+
+  <!-- PHONES -->
+  <div id="phones-grid" class="phones-grid">
+    <div class="loading"><div class="spinner"></div><br>Yuklanmoqda...</div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-bottom">© 2026 PhoneShop. Barcha huquqlar himoyalangan.</div>
+  </div>
+</footer>
+
+<div id="toast-wrap"></div>
+
+<script type="module">
+import { addToCart, updateCartCount, formatPrice, brandIcon, toast } from '../js/cart.js';
+
+const API = '/api';
+let allPhones = [];
+
+async function load() {
+  try {
+    const [phones, brands] = await Promise.all([
+      fetch(`${API}/phones`).then(r => r.json()),
+      fetch(`${API}/phones/brands`).then(r => r.json()),
+    ]);
+    allPhones = phones;
+
+    const brandSel = document.getElementById('brand-filter');
+    brands.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b; opt.textContent = b;
+      brandSel.appendChild(opt);
+    });
+
+    // Check URL params
+    const params = new URLSearchParams(location.search);
+    if (params.get('brand')) brandSel.value = params.get('brand');
+
+    applyFilters();
+  } catch(e) { console.error(e); }
+}
+
+function applyFilters() {
+  let phones = [...allPhones];
+  const search = document.getElementById('search').value.toLowerCase().trim();
+  const brand = document.getElementById('brand-filter').value;
+  const sort = document.getElementById('sort-filter').value;
+
+  if (search) phones = phones.filter(p =>
+    `${p.brand} ${p.name}`.toLowerCase().includes(search)
+  );
+  if (brand) phones = phones.filter(p => p.brand === brand);
+
+  if (sort === 'price-asc') phones.sort((a,b) => parseFloat(a.price) - parseFloat(b.price));
+  else if (sort === 'price-desc') phones.sort((a,b) => parseFloat(b.price) - parseFloat(a.price));
+
+  document.getElementById('result-count').textContent = `${phones.length} ta telefon topildi`;
+  renderPhones(phones);
+}
+
+function renderPhones(phones) {
+  const grid = document.getElementById('phones-grid');
+  if (!phones.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🔍</div>Telefon topilmadi. Boshqa kalit so\'z bilan qidiring.</div>';
+    return;
+  }
+  grid.innerHTML = phones.map(p => `
+    <div class="phone-card" onclick="location.href='detail.html?id=${p.id}'">
+      <div class="phone-card-img" style="background:linear-gradient(145deg,${p.color}22,${p.color}08)">
+        ${p.featured ? '<div style="position:absolute;top:12px;right:12px"><span class="badge badge-purple">Top</span></div>' : ''}
+        <div class="phone-mockup" style="background:linear-gradient(145deg,${p.color},${p.color}bb)">
+          <span class="phone-brand-icon">${brandIcon(p.brand)}</span>
+        </div>
+      </div>
+      <div class="phone-card-body">
+        <div class="phone-brand">${p.brand}</div>
+        <div class="phone-name">${p.name}</div>
+        <div class="phone-specs">
+          <span class="spec-tag">${p.storage}</span>
+          <span class="spec-tag">${p.ram} RAM</span>
+          <span class="spec-tag">${p.camera}</span>
+          <span class="spec-tag">${p.battery}</span>
+        </div>
+        <div class="phone-price-row">
+          <div>
+            <div class="phone-price">${formatPrice(p.price)}</div>
+            ${p.oldPrice ? `<div class="phone-old-price">${formatPrice(p.oldPrice)}</div>` : ''}
+          </div>
+          <button class="phone-add-btn" onclick="event.stopPropagation();handleAdd(${p.id})">+ Savat</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+window.handleAdd = (id) => {
+  const p = allPhones.find(x => x.id === id);
+  if (p) { addToCart(p); toast(`${p.brand} ${p.name} savatga qo'shildi`); }
+};
+
+document.getElementById('search').addEventListener('input', applyFilters);
+document.getElementById('brand-filter').addEventListener('change', applyFilters);
+document.getElementById('sort-filter').addEventListener('change', applyFilters);
+document.getElementById('reset-btn').addEventListener('click', () => {
+  document.getElementById('search').value = '';
+  document.getElementById('brand-filter').value = '';
+  document.getElementById('sort-filter').value = 'default';
+  applyFilters();
+});
+
+load();
+</script>
+</body>
+</html>

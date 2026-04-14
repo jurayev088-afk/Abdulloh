@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Savat — PhoneShop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/style.css">
+  <style>
+    .cart-layout { display: grid; grid-template-columns: 1fr 360px; gap: 28px; align-items: start; }
+    .cart-item {
+      display: flex; align-items: center; gap: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px;
+      margin-bottom: 12px; transition: border-color .15s;
+    }
+    .cart-item:hover { border-color: var(--border); }
+    .cart-item-icon {
+      width: 60px; height: 60px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 24px;
+    }
+    .cart-item-info { flex: 1; }
+    .cart-item-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .cart-item-price { font-size: 13px; color: var(--text-muted); }
+    .cart-item-actions { display: flex; align-items: center; gap: 10px; }
+    .qty-ctrl { display: flex; align-items: center; gap: 8px; }
+    .qty-btn2 {
+      width: 30px; height: 30px; border-radius: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); font-size: 16px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-family: inherit;
+      transition: all .15s;
+    }
+    .qty-btn2:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent2); }
+    .qty-num { font-size: 15px; font-weight: 700; min-width: 24px; text-align: center; }
+    .del-btn {
+      background: none; border: none; cursor: pointer; color: var(--text-dim);
+      padding: 6px; border-radius: 6px; display: flex; align-items: center; transition: all .15s;
+    }
+    .del-btn:hover { color: var(--red); background: rgba(239,68,68,.1); }
+    .summary-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; position: sticky; top: 80px;
+    }
+    .summary-title { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
+    .summary-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
+    .summary-row.total { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 14px; font-size: 18px; font-weight: 800; }
+    .summary-row.total .val { color: var(--accent2); }
+    @media (max-width: 768px) { .cart-layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <a class="logo" href="/store/">Phone<span>Shop</span></a>
+    <nav class="nav">
+      <a href="/phone-store/index.html">Bosh sahifa</a>
+      <a href="./phones.html">Telefonlar</a>
+      <a href="./cart.html" class="active">Savat</a>
+    </nav>
+    <div class="header-right">
+      <a class="cart-btn" href="./cart.html">🛒 Savat <span class="cart-count" id="cart-count">0</span></a>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <div class="breadcrumb">
+    <a href="/phone-store/index.html">Bosh sahifa</a><span>›</span><span>Savat</span>
+  </div>
+  <h1 class="section-title">Mening savatim</h1>
+
+  <div id="cart-content"></div>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-bottom">© 2026 PhoneShop. Barcha huquqlar himoyalangan.</div>
+  </div>
+</footer>
+
+<div id="toast-wrap"></div>
+
+<script type="module">
+import { getCart, saveCart, removeFromCart, updateQty, cartTotal, formatPrice, brandIcon, toast } from '../js/cart.js';
+
+function render() {
+  const cart = getCart();
+  const content = document.getElementById('cart-content');
+  const count = document.getElementById('cart-count');
+  count.textContent = cart.reduce((s,i) => s + i.quantity, 0);
+
+  if (!cart.length) {
+    content.innerHTML = `
+      <div class="empty" style="padding:80px 0">
+        <div class="empty-icon">🛒</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px">Savat bo'sh</div>
+        <div style="margin-bottom:20px">Telefon katalogiga o'ting va sevimli modelingizni tanlang</div>
+        <a class="btn btn-primary" href="phones.html">Telefon tanlash</a>
+      </div>`;
+    return;
+  }
+
+  const total = cartTotal();
+  const delivery = 30000;
+
+  content.innerHTML = `
+    <div class="cart-layout">
+      <div id="items-list"></div>
+      <div class="summary-card">
+        <div class="summary-title">Buyurtma ma'lumotlari</div>
+        <div class="summary-row"><span>Telefonlar (${cart.reduce((s,i)=>s+i.quantity,0)} dona)</span><span>${formatPrice(total)}</span></div>
+        <div class="summary-row"><span>Yetkazib berish</span><span>${formatPrice(delivery)}</span></div>
+        <div class="summary-row total"><span>Jami</span><span class="val">${formatPrice(total + delivery)}</span></div>
+        <a class="btn btn-primary btn-full" style="margin-top:18px" href="checkout.html">Buyurtma berish →</a>
+        <a class="btn btn-ghost btn-full" style="margin-top:8px" href="phones.html">← Xarid davom ettirish</a>
+        <button class="btn btn-ghost btn-full" style="color:var(--red);margin-top:4px" id="clear-btn">🗑️ Savatni tozalash</button>
+      </div>
+    </div>`;
+
+  renderItems(cart);
+
+  document.getElementById('clear-btn').addEventListener('click', () => {
+    if (confirm('Savatni tozalashni xohlaysizmi?')) {
+      localStorage.removeItem('phonestore_cart');
+      render();
+    }
+  });
+}
+
+function renderItems(cart) {
+  const list = document.getElementById('items-list');
+  list.innerHTML = cart.map(item => `
+    <div class="cart-item" id="item-${item.id}">
+      <div class="cart-item-icon" style="background:linear-gradient(145deg,${item.color},${item.color}88)">
+        <span>${brandIcon(item.name.split(' ')[0])}</span>
+      </div>
+      <div class="cart-item-info">
+        <div class="cart-item-name">${item.name}</div>
+        <div class="cart-item-price">${formatPrice(item.price)} × ${item.quantity} = <strong style="color:var(--accent2)">${formatPrice(item.price * item.quantity)}</strong></div>
+      </div>
+      <div class="cart-item-actions">
+        <div class="qty-ctrl">
+          <button class="qty-btn2" onclick="changeQty(${item.id}, -1)">−</button>
+          <span class="qty-num">${item.quantity}</span>
+          <button class="qty-btn2" onclick="changeQty(${item.id}, 1)">+</button>
+        </div>
+        <button class="del-btn" onclick="removeItem(${item.id})" title="O'chirish">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+window.changeQty = (id, delta) => {
+  const cart = getCart();
+  const item = cart.find(i => i.id === id);
+  if (!item) return;
+  item.quantity = Math.max(1, item.quantity + delta);
+  saveCart(cart);
+  render();
+};
+
+window.removeItem = (id) => {
+  removeFromCart(id);
+  toast('Mahsulot savatdan o\'chirildi');
+  render();
+};
+
+render();
+</script>
+</body>
+</html>
